@@ -17,9 +17,14 @@
         "android.permission.USE_EXACT_ALARM",
         "android.permission.VIBRATE"
       ]
-    }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "extra": {
+      "eas": {
+        "projectId": "5a53874f-9173-4467-962a-5676797f32d9"
+      }
     }
+  },
+  "web": {
+    "favicon": "./assets/favicon.png"
   }
+}
