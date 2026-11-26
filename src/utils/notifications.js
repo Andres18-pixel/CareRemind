@@ -32,15 +32,20 @@ export async function configurarNotificaciones() {
   }
 }
 
+// Programa las próximas 5 tomas exactas en el segundo :00
 export async function programarColaNotificaciones({ nombre, dosis, proximaTomaISO, cadaHoras }) {
   const ids = [];
-  const baseTime = new Date(proximaTomaISO).getTime();
+  const baseDate = new Date(proximaTomaISO);
+  baseDate.setSeconds(0, 0);
+  const baseTime = baseDate.getTime();
+
   const intervaloMs = Number(cadaHoras) * 60 * 60 * 1000;
   const ahora = Date.now();
 
   let salto = 0;
   while (ids.length < 5) {
     const fechaDisparo = new Date(baseTime + salto * intervaloMs);
+    fechaDisparo.setSeconds(0, 0);
     salto++;
 
     if (fechaDisparo.getTime() <= ahora) continue;

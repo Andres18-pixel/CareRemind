@@ -23,3 +23,15 @@ export async function registrarTomaEnHistorial(entrada) {
   await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(actualizado));
   return actualizado;
 }
+
+export async function eliminarRegistroHistorial(id) {
+  const actual = await obtenerHistorial();
+  const actualizado = actual.filter((item) => item.id !== id);
+  await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(actualizado));
+  return actualizado;
+}
+
+export async function limpiarTodoHistorial() {
+  await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify([]));
+  return [];
+}

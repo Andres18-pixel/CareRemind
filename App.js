@@ -25,18 +25,30 @@ import {
   guardarMedicamentos,
   obtenerHistorial,
   registrarTomaEnHistorial,
+  eliminarRegistroHistorial,
+  limpiarTodoHistorial,
 } from './src/utils/storage';
 
 const INTERVALOS_RAPIDOS = ['6', '8', '10', '12', '24'];
 
+// Si hay segundos extra (ej. 12:10:45), redondea hacia arriba al minuto siguiente (12:11:00)
+function redondearAlMinutoExacto(fecha) {
+  const d = new Date(fecha.getTime());
+  if (d.getSeconds() > 0 || d.getMilliseconds() > 0) {
+    d.setMinutes(d.getMinutes() + 1);
+  }
+  d.setSeconds(0, 0);
+  return d;
+}
+
 export default function App() {
-  const [pestanaActiva, setPestanaActiva] = useState('pastillas'); // 'pastillas' | 'historial'
+  const [pestanaActiva, setPestanaActiva] = useState('pastillas');
   const [medicamentos, setMedicamentos] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [medicamentoEditandoId, setMedicamentoEditandoId] = useState(null);
 
-  // Estados del formulario (crear y editar)
+  // Estados del formulario
   const [nombre, setNombre] = useState('');
   const [dosis, setDosis] = useState('1 pastilla');
   const [cadaHoras, setCadaHoras] = useState('8');
@@ -98,16 +110,16 @@ export default function App() {
 
   function calcularPrimeraToma(medExistente = null) {
     if (modoHora === 'mantener' && medExistente) {
-      const fechaGuardada = new Date(medExistente.proximaTomaISO);
+      const fechaGuardada = redondearAlMinutoExacto(new Date(medExistente.proximaTomaISO));
       if (fechaGuardada.getTime() > Date.now()) {
         return fechaGuardada;
       }
-      return new Date(Date.now() + 60 * 1000);
+      return redondearAlMinutoExacto(new Date(Date.now() + 60 * 1000));
     }
 
     const ahora = new Date();
     if (modoHora === 'ahora') {
-      return new Date(ahora.getTime() + 60 * 1000);
+      return redondearAlMinutoExacto(new Date(ahora.getTime() + 60 * 1000));
     }
 
     const partes = horaInicioTexto.trim().split(':');
@@ -158,11 +170,10 @@ export default function App() {
 
     const fechaPrimeraToma = calcularPrimeraToma(medExistente);
     if (!fechaPrimeraToma) {
-      Alert.alert('Hora inválida', 'Usa el formato 24h HH:MM (por ejemplo, 08:30 o 21:00).');
+      Alert.alert('Hora inválida', 'Usa el formato 24h HH:MM (por ejemplo, 08:30 o 21:15).');
       return;
     }
 
-    // Si estamos editando, cancelamos las notificaciones viejas antes de crear las nuevas
     if (medExistente?.notificationIds) {
       await cancelarNotificaciones(medExistente.notificationIds);
     }
@@ -218,7 +229,10 @@ export default function App() {
   async function handleMarcarTomada(med) {
     await cancelarNotificaciones(med.notificationIds);
 
-    const siguienteFecha = new Date(Date.now() + med.cadaHoras * 60 * 60 * 1000);
+    // Redondea el momento actual al minuto exacto (:00) y suma el intervalo en horas
+    const baseExacta = redondearAlMinutoExacto(new Date());
+    const siguienteFecha = new Date(baseExacta.getTime() + med.cadaHoras * 60 * 60 * 1000);
+    siguienteFecha.setSeconds(0, 0);
     const proximaTomaISO = siguienteFecha.toISOString();
 
     const nuevosIds = await programarColaNotificaciones({
@@ -306,6 +320,29 @@ export default function App() {
     );
   }
 
+  async function handleEliminarItemHistorial(id) {
+    const actualizado = await eliminarRegistroHistorial(id);
+    setHistorial(actualizado);
+  }
+
+  function confirmarLimpiarHistorial() {
+    Alert.alert(
+      'Vaciar historial',
+      '¿Seguro que quieres borrar todos los registros de tomas anteriores?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Vaciar todo',
+          style: 'destructive',
+          onPress: async () => {
+            const vacio = await limpiarTodoHistorial();
+            setHistorial(vacio);
+          },
+        },
+      ]
+    );
+  }
+
   async function probarNotificacionAhora() {
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -324,7 +361,8 @@ export default function App() {
   function formatearProximaToma(isoString) {
     const fecha = new Date(isoString);
     const hoy = new Date();
-    const esHoy = fecha.toDateString() === hoy.toDateString();
+    const manana = new Date();
+    manana.setDate(hoy.getDate() + 1);
 
     const hora = fecha.toLocaleTimeString('es-NI', {
       hour: '2-digit',
@@ -332,7 +370,12 @@ export default function App() {
       hour12: true,
     });
 
-    if (esHoy) return `Hoy a las ${hora}`;
+    if (fecha.toDateString() === hoy.toDateString()) {
+      return `Hoy a las ${hora}`;
+    }
+    if (fecha.toDateString() === manana.toDateString()) {
+      return `Mañana a las ${hora}`;
+    }
 
     const dia = fecha.toLocaleDateString('es-NI', {
       day: '2-digit',
@@ -430,10 +473,16 @@ export default function App() {
         <Text style={styles.historialNombre}>{item.nombre}</Text>
         <Text style={styles.historialDosis}>{item.dosis}</Text>
       </View>
-      <View style={{ alignItems: 'flex-end' }}>
+      <View style={{ alignItems: 'flex-end', marginRight: 8 }}>
         <Text style={styles.historialHora}>{item.horaTexto}</Text>
         <Text style={styles.historialFecha}>{item.fechaTexto}</Text>
       </View>
+      <TouchableOpacity
+        onPress={() => handleEliminarItemHistorial(item.id)}
+        style={styles.btnEliminarHistorial}
+      >
+        <Text style={styles.btnEliminarHistorialTexto}>✕</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -507,6 +556,18 @@ export default function App() {
           keyExtractor={(item) => item.id}
           renderItem={renderHistorial}
           contentContainerStyle={styles.listaContenido}
+          ListHeaderComponent={
+            historial.length > 0 ? (
+              <View style={styles.historialHeaderRow}>
+                <TouchableOpacity
+                  onPress={confirmarLimpiarHistorial}
+                  style={styles.btnVaciarHistorial}
+                >
+                  <Text style={styles.btnVaciarHistorialTexto}>🗑 Vaciar historial</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Text style={styles.emptyEmoji}>📅</Text>
@@ -636,7 +697,7 @@ export default function App() {
               {modoHora === 'especifica' && (
                 <TextInput
                   style={styles.input}
-                  placeholder="Formato HH:MM (ej. 08:30 o 22:00)"
+                  placeholder="Formato HH:MM (ej. 08:30 o 21:15)"
                   placeholderTextColor="#829AB1"
                   value={horaInicioTexto}
                   onChangeText={setHoraInicioTexto}
@@ -870,6 +931,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 15,
   },
+  historialHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 10,
+  },
+  btnVaciarHistorial: {
+    backgroundColor: '#FDECEC',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  btnVaciarHistorialTexto: {
+    color: COLORS.danger,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   historialCard: {
     backgroundColor: COLORS.card,
     borderRadius: 14,
@@ -904,6 +981,14 @@ const styles = StyleSheet.create({
   historialFecha: {
     fontSize: 12,
     color: COLORS.textSecondary,
+  },
+  btnEliminarHistorial: {
+    padding: 6,
+  },
+  btnEliminarHistorialTexto: {
+    color: '#829AB1',
+    fontSize: 15,
+    fontWeight: '700',
   },
   emptyBox: {
     alignItems: 'center',
