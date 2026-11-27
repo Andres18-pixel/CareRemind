@@ -12,19 +12,28 @@
     "android": {
       "package": "com.careremind.app",
       "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM",
         "android.permission.VIBRATE"
       ]
     },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#3D99F5"
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "5a53874f-9173-4467-962a-5676797f32d9"
       }
     }
-  },
-  "web": {
-    "favicon": "./assets/favicon.png"
   }
 }

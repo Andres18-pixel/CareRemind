@@ -13,12 +13,12 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { COLORS } from './src/theme/colors';
 import {
   configurarNotificaciones,
   programarColaNotificaciones,
   cancelarNotificaciones,
+  enviarNotificacionPrueba,
 } from './src/utils/notifications';
 import {
   obtenerMedicamentos,
@@ -344,18 +344,11 @@ export default function App() {
   }
 
   async function probarNotificacionAhora() {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'CareRemind • Prueba de aviso 💙',
-        body: '✨ ¡Todo listo! Así llegarán tus recordatorios amigables.',
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: new Date(Date.now() + 4000),
-      },
-    });
-    Alert.alert('Prueba enviada', 'Bloquea tu pantalla o espera 4 segundos para verla llegar.');
+    await enviarNotificacionPrueba();
+    Alert.alert(
+      'Prueba enviada',
+      'Sal de la app o bloquea tu pantalla. Llegará en 5 segundos.'
+    );
   }
 
   function formatearProximaToma(isoString) {
@@ -944,25 +937,30 @@ const styles = StyleSheet.create({
   },
   btnVaciarHistorialTexto: {
     color: COLORS.danger,
-    fontSize: 12,
     fontWeight: '700',
+    fontSize: 13,
   },
   historialCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.card,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   historialIcono: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#EAF4EC',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   historialNombre: {
     fontSize: 16,
@@ -972,18 +970,21 @@ const styles = StyleSheet.create({
   historialDosis: {
     fontSize: 13,
     color: COLORS.textSecondary,
+    marginTop: 2,
   },
   historialHora: {
     fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.primaryBright,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
   },
   historialFecha: {
     fontSize: 12,
     color: COLORS.textSecondary,
+    marginTop: 2,
   },
   btnEliminarHistorial: {
-    padding: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   btnEliminarHistorialTexto: {
     color: '#829AB1',
@@ -993,33 +994,33 @@ const styles = StyleSheet.create({
   emptyBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 70,
-    paddingHorizontal: 30,
+    paddingVertical: 60,
+    paddingHorizontal: 24,
   },
   emptyEmoji: {
-    fontSize: 44,
-    marginBottom: 10,
+    fontSize: 48,
+    marginBottom: 12,
   },
   emptyTitulo: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.primaryDark,
+    marginBottom: 6,
     textAlign: 'center',
   },
   emptySubtitulo: {
     fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: 6,
     lineHeight: 20,
   },
   fab: {
     position: 'absolute',
     bottom: 24,
-    left: 20,
     right: 20,
+    left: 20,
     backgroundColor: COLORS.primaryBright,
-    paddingVertical: 16,
+    paddingVertical: 15,
     borderRadius: 16,
     alignItems: 'center',
     shadowColor: '#1E3A5F',
@@ -1036,37 +1037,37 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(30, 58, 95, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    padding: 20,
   },
   modalCard: {
     backgroundColor: COLORS.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 22,
-    maxHeight: '90%',
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: '88%',
   },
   modalTitulo: {
     fontSize: 22,
     fontWeight: '800',
     color: COLORS.primaryDark,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: COLORS.primaryDark,
-    marginTop: 10,
     marginBottom: 6,
+    marginTop: 10,
   },
   input: {
     backgroundColor: '#F0F4F8',
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 15,
     color: COLORS.primaryDark,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -1075,30 +1076,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chip: {
+    backgroundColor: '#F0F4F8',
+    borderWidth: 1,
+    borderColor: COLORS.border,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#F0F4F8',
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   chipLargo: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
     backgroundColor: '#F0F4F8',
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
   chipActivo: {
     backgroundColor: COLORS.primaryBright,
     borderColor: COLORS.primaryBright,
   },
   chipTexto: {
+    fontSize: 13,
     fontWeight: '700',
     color: COLORS.primaryDark,
-    fontSize: 13,
   },
   chipTextoActivo: {
     color: '#FFFFFF',
@@ -1107,13 +1107,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 22,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   btnCancelarModal: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
     backgroundColor: '#E2E8F0',
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: 'center',
   },
   btnCancelarModalTexto: {
@@ -1122,10 +1122,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   btnGuardarModal: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
+    flex: 1,
     backgroundColor: COLORS.primaryBright,
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: 'center',
   },
   btnGuardarModalTexto: {
